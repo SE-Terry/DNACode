@@ -751,3 +751,401 @@ void getActionByCommand(enum commandType command, struct Gene *geneTable, int co
 }
 
 // ----- End: Student Answer -----
+
+// Test Functions
+void testSanitizeCode() {
+    printf("=== TEST: sanitizeCode (3 test cases) ===\n");
+    
+    // Test case 1: String with special characters
+    char test1[] = "A-TG@@ata–TAG??!!";
+    char *result1 = sanitizeCode(test1);
+    printf("Test 1 - Input: '%s'\n", test1);
+    printf("Test 1 - Output: '%s'\n", result1);
+    printf("\n");
+    
+    // Test case 2: Lowercase DNA sequence
+    char test2[] = "atgcgtTAA";
+    char *result2 = sanitizeCode(test2);
+    printf("Test 2 - Input: '%s'\n", test2);
+    printf("Test 2 - Output: '%s'\n", result2);
+    printf("\n");
+    
+    // Test case 3: Mixed case with invalid characters
+    char test3[] = "ATGcgT123XYZtAA";
+    char *result3 = sanitizeCode(test3);
+    printf("Test 3 - Input: '%s'\n", test3);
+    printf("Test 3 - Output: '%s'\n", result3);
+    printf("\n");
+}
+
+void testValidCheck() {
+    printf("=== TEST: validCheck (3 test cases) ===\n");
+    
+    // Test case 1: Valid gene
+    printf("Test 1 - Valid gene (ATGCGTTAA):\n");
+    validCheck("ATGCGTTAA");
+    printf("\n");
+    
+    // Test case 2: Invalid - too short
+    printf("Test 2 - Invalid gene (too short - ATG):\n");
+    validCheck("ATG");
+    printf("\n");
+    
+    // Test case 3: Invalid - no start codon
+    printf("Test 3 - Invalid gene (no ATG start - CGTTAA):\n");
+    validCheck("CGTTAA");
+    printf("\n");
+}
+
+void testEncodeDecode() {
+    printf("=== TEST: encode/decode (3 test cases) ===\n");
+    
+    // Test case 1: Simple gene
+    char *gene1 = "ATGCGTTAA";
+    char *encoded1 = encode(gene1);
+    char *decoded1 = decode(encoded1);
+    printf("Test 1 - Original: %s\n", gene1);
+    printf("Test 1 - Encoded: %s\n", encoded1);
+    printf("Test 1 - Decoded: %s\n", decoded1);
+    printf("\n");
+    
+    // Test case 2: Longer gene
+    char *gene2 = "ATGAAACTAG";
+    char *encoded2 = encode(gene2);
+    char *decoded2 = decode(encoded2);
+    printf("Test 2 - Original: %s\n", gene2);
+    printf("Test 2 - Encoded: %s\n", encoded2);
+    printf("Test 2 - Decoded: %s\n", decoded2);
+    printf("\n");
+    
+    // Test case 3: Another gene
+    char *gene3 = "ATGCGTGGCTAATAG";
+    char *encoded3 = encode(gene3);
+    char *decoded3 = decode(encoded3);
+    printf("Test 3 - Original: %s\n", gene3);
+    printf("Test 3 - Encoded: %s\n", encoded3);
+    printf("Test 3 - Decoded: %s\n", decoded3);
+    printf("\n");
+}
+
+void testComplementMRNA() {
+    printf("=== TEST: generateComplement & generateMRNA (3 test cases) ===\n");
+    
+    // Test case 1
+    char *gene1 = "ATGCGTTAA";
+    char *comp1 = generateComplement(gene1);
+    char *mrna1 = generateMRNA(gene1);
+    printf("Test 1 - Original: %s\n", gene1);
+    printf("Test 1 - Complement: %s\n", comp1);
+    printf("Test 1 - mRNA: %s\n", mrna1);
+    printf("\n");
+    
+    // Test case 2
+    char *gene2 = "ATGAAACTAG";
+    char *comp2 = generateComplement(gene2);
+    char *mrna2 = generateMRNA(gene2);
+    printf("Test 2 - Original: %s\n", gene2);
+    printf("Test 2 - Complement: %s\n", comp2);
+    printf("Test 2 - mRNA: %s\n", mrna2);
+    printf("\n");
+    
+    // Test case 3
+    char *gene3 = "ATGCGTGGCTAATAG";
+    char *comp3 = generateComplement(gene3);
+    char *mrna3 = generateMRNA(gene3);
+    printf("Test 3 - Original: %s\n", gene3);
+    printf("Test 3 - Complement: %s\n", comp3);
+    printf("Test 3 - mRNA: %s\n", mrna3);
+    printf("\n");
+}
+
+void testMutation() {
+    printf("=== TEST: Mutation functions (3 test cases) ===\n");
+    
+    struct Gene com_mutation_geneTable[10] = {
+        {"G_1", "ATGCGTTAA", 9, "", "", ""},
+        {"G_2", "ATGAAACTAGTTTGA", 15, "", "", ""},
+        {"G_3", "ATGAAACTATTTGGGTGA", 18, "", "", ""},
+        {"G_4", "ATGCGTGGCTAATAG", 15, "", "", ""},
+        {"G_5", "ATGCGCTGA", 9, "", "", ""},
+        {"G_6", "ATGCCGTAATAG", 12, "", "", ""},
+        {"G_7", "ATGTTTAAACCCGGGTAA", 18, "", "", ""},
+        {"G_8", "ATGCGATCGCTAG", 13, "", "", ""},
+        {"G_9", "ATGAAATTTCCCGGGTGA", 18, "", "", ""},
+        {"G_10", "ATGACTGACTAA", 12, "", "", ""}
+    };
+    
+    // Test case 1: Normal gene (not mutated)
+    struct Gene testGene1 = {"G1", "ATGCGTTAA", 9, "", "", ""};
+    int mut1 = isMutated(testGene1, com_mutation_geneTable, 10);
+    printf("Test 1 - Gene: %s\n", testGene1.org_seq);
+    printf("Test 1 - isMutated: %d (0=normal, 1=mutated)\n", mut1);
+    printf("\n");
+    
+    // Test case 2: Mutated gene
+    struct Gene testGene2 = {"G2", "ATGCGTTAC", 9, "", "", ""};
+    int mut2 = isMutated(testGene2, com_mutation_geneTable, 10);
+    int codonPos = findMutatedCodons(testGene2, "ATGCGTTAA");
+    printf("Test 2 - Gene: %s\n", testGene2.org_seq);
+    printf("Test 2 - isMutated: %d (0=normal, 1=mutated)\n", mut2);
+    printf("Test 2 - First mutated codon position: %d\n", codonPos);
+    printf("\n");
+    
+    // Test case 3: Repair mutation
+    struct Gene testGene3 = {"G3", "ATGCGTTAC", 9, "", "", ""};
+    char *repaired = repairMutation(testGene3, 1);
+    printf("Test 3 - Original: %s\n", testGene3.org_seq);
+    printf("Test 3 - Repaired (pos 1): %s\n", repaired);
+    printf("\n");
+}
+
+void testGeneOperations() {
+    printf("=== TEST: Gene operations (3 test cases) ===\n");
+    
+    // Test case 1: Reverse gene
+    struct Gene testGene1 = {"G1", "ATGCGTTAA", 9, "", "", ""};
+    char *reversed = reverseGene(testGene1);
+    printf("Test 1 - Original: %s\n", testGene1.org_seq);
+    printf("Test 1 - Reversed: %s\n", reversed);
+    printf("\n");
+    
+    // Test case 2: Longest/Shortest genes
+    struct Gene testTable[3] = {
+        {"G1", "ATGCGTTAA", 9, "", "", ""},
+        {"G2", "ATGAAACTAGTTTGA", 15, "", "", ""},
+        {"G3", "ATGCGTGGCTAATAG", 15, "", "", ""}
+    };
+    printf("Test 2 - Longest genes:\n");
+    longestGene(testTable, 3);
+    printf("\nTest 2 - Shortest genes:\n");
+    shortestGene(testTable, 3);
+    printf("\n");
+    
+    // Test case 3: DNA Pipeline
+    struct Gene testGene3 = {"G1", "ATGCGTTAA", 9, "", "", ""};
+    printf("Test 3 - DNA Pipeline:\n");
+    DNAPipeline(testGene3);
+    printf("\n");
+}
+
+void testCommandType() {
+    printf("=== TEST: getCommandType (3 test cases) ===\n");
+    
+    // Test case 1: ENCODE command
+    enum commandType cmd1 = getCommandType("Encode the first GENE");
+    printf("Test 1 - Command: 'Encode the first GENE'\n");
+    printf("Test 1 - Result: %d (ENCODE=%d)\n", cmd1, ENCODE);
+    printf("\n");
+    
+    // Test case 2: FIND COMPLEMENT command
+    enum commandType cmd2 = getCommandType("Find the complement sequence");
+    printf("Test 2 - Command: 'Find the complement sequence'\n");
+    printf("Test 2 - Result: %d (COMPLEMENT=%d)\n", cmd2, COMPLEMENT);
+    printf("\n");
+    
+    // Test case 3: Invalid command
+    enum commandType cmd3 = getCommandType("Invalid command test");
+    printf("Test 3 - Command: 'Invalid command test'\n");
+    printf("Test 3 - Result: %d (INVALID=%d)\n", cmd3, INVALID);
+    printf("\n");
+}
+
+void testOverallProgram() {
+    printf("========================================\n");
+    printf("OVERALL PROGRAM INTEGRATION TEST\n");
+    printf("========================================\n\n");
+    
+    // Scenario 1: Create a gene table from raw DNA sequences
+    printf("=== SCENARIO 1: Creating Gene Table ===\n");
+    struct Gene geneTable[5];
+    char *geneInfo[] = {
+        "ATGCGTTAA",           // Valid gene
+        "ATGAAACTAG",          // Valid gene
+        "ATGCGTGGCTAATAG",     // Valid gene
+        NULL
+    };
+    
+    int count = createTable(geneTable, geneInfo);
+    printf("Created %d genes in the table\n", count);
+    printf("\n");
+    
+    // Scenario 2: Print the gene table
+    printf("=== SCENARIO 2: Printing Gene Table ===\n");
+    printTable(geneTable, count);
+    printf("\n");
+    
+    // Scenario 3: Sanitize all genes
+    printf("=== SCENARIO 3: Sanitizing All Genes ===\n");
+    getActionByCommand(SANITIZE, geneTable, count);
+    printf("\n");
+    
+    // Scenario 4: Validate all genes
+    printf("=== SCENARIO 4: Validating All Genes ===\n");
+    getActionByCommand(CHECK, geneTable, count);
+    printf("\n");
+    
+    // Scenario 5: Generate complements
+    printf("=== SCENARIO 5: Generating Complements ===\n");
+    getActionByCommand(COMPLEMENT, geneTable, count);
+    printf("\n");
+    
+    // Scenario 6: Generate mRNA sequences
+    printf("=== SCENARIO 6: Generating mRNA Sequences ===\n");
+    getActionByCommand(MRNA, geneTable, count);
+    printf("\n");
+    
+    // Scenario 7: Encode all genes
+    printf("=== SCENARIO 7: Encoding All Genes ===\n");
+    getActionByCommand(ENCODE, geneTable, count);
+    printf("\n");
+    
+    // Scenario 8: Decode encoded sequences
+    printf("=== SCENARIO 8: Decoding Encoded Sequences ===\n");
+    getActionByCommand(DECODE, geneTable, count);
+    printf("\n");
+    
+    // Scenario 9: Reverse all genes
+    printf("=== SCENARIO 9: Reversing All Genes ===\n");
+    getActionByCommand(REVERSE, geneTable, count);
+    printf("\n");
+    
+    // Scenario 10: Find longest and shortest genes
+    printf("=== SCENARIO 10: Finding Longest Genes ===\n");
+    getActionByCommand(LONGEST, geneTable, count);
+    printf("\n");
+    
+    printf("=== SCENARIO 11: Finding Shortest Genes ===\n");
+    getActionByCommand(SHORTEST, geneTable, count);
+    printf("\n");
+    
+    // Scenario 11: DNA Pipeline for all genes
+    printf("=== SCENARIO 12: DNA Pipeline for All Genes ===\n");
+    getActionByCommand(PIPELINE, geneTable, count);
+    printf("\n");
+    
+    // Scenario 12: Mutation detection
+    printf("=== SCENARIO 13: Detecting Mutations ===\n");
+    getActionByCommand(MUTATION, geneTable, count);
+    printf("\n");
+    
+    // Scenario 13: Repair mutations
+    printf("=== SCENARIO 14: Repairing Mutations ===\n");
+    getActionByCommand(REPAIR, geneTable, count);
+    printf("\n");
+    
+    // Scenario 14: Test command parsing with various inputs
+    printf("=== SCENARIO 15: Testing Command Parsing ===\n");
+    char *commands[] = {
+        "Sanitize the code",
+        "Validation check",
+        "Find the complement sequence",
+        "Find the mRNA sequence",
+        "Encode",
+        "Decode",
+        "Create the table",
+        "Print the gene table",
+        "Detect a mutation",
+        "Repair the mutated gene",
+        "Reverse",
+        "Find the longest gene",
+        "Find the shortest gene",
+        "Print the DNA pipeline",
+        "Invalid command here"
+    };
+    
+    for (int i = 0; i < 15; i++) {
+        enum commandType cmd = getCommandType(commands[i]);
+        printf("Command: '%s' -> Type: %d\n", commands[i], cmd);
+    }
+    printf("\n");
+    
+    // Scenario 15: Complete workflow test - Encode/Decode round trip
+    printf("=== SCENARIO 16: Encode/Decode Round Trip Test ===\n");
+    char *testGenes[] = {"ATGCGTTAA", "ATGAAACTAG", "ATGCGTGGCTAATAG"};
+    for (int i = 0; i < 3; i++) {
+        char *original = testGenes[i];
+        char *encoded = encode(original);
+        char *decoded = decode(encoded);
+        printf("Original: %s\n", original);
+        printf("Encoded:  %s\n", encoded);
+        printf("Decoded:  %s\n", decoded);
+        printf("Match: %s\n\n", (strcmp(original, decoded) == 0) ? "YES" : "NO");
+    }
+    
+    // Scenario 16: Complete DNA processing pipeline for a single gene
+    printf("=== SCENARIO 17: Complete DNA Processing Pipeline ===\n");
+    char *testGene = "ATGCGTTAA";
+    printf("Original DNA: %s\n", testGene);
+    
+    char *sanitized = sanitizeCode(testGene);
+    printf("Sanitized: %s\n", sanitized);
+    
+    bool isValid = validCheck(testGene);
+    printf("Valid: %s\n", isValid ? "YES" : "NO");
+    
+    if (isValid) {
+        char *complement = generateComplement(testGene);
+        printf("Complement: %s\n", complement);
+        
+        char *mrna = generateMRNA(testGene);
+        printf("mRNA: %s\n", mrna);
+        
+        char *encoded = encode(testGene);
+        printf("Encoded: %s\n", encoded);
+        
+        struct Gene testGeneStruct;
+        strcpy(testGeneStruct.name, "TestGene");
+        strcpy(testGeneStruct.org_seq, testGene);
+        testGeneStruct.length = (int)strlen(testGene);
+        testGeneStruct.encoded_seq[0] = '\0';
+        testGeneStruct.complement_seq[0] = '\0';
+        testGeneStruct.mrna_seq[0] = '\0';
+        char *reversed = reverseGene(testGeneStruct);
+        printf("Reversed: %s\n", reversed);
+    }
+    printf("\n");
+    
+    // Scenario 17: Test with encoded input (numbers)
+    printf("=== SCENARIO 18: Creating Table from Encoded Input ===\n");
+    char *encodedGene = encode("ATGCGTTAA");
+    struct Gene encodedTable[2];
+    char *encodedGeneInfo[] = {
+        encodedGene,  // Encoded sequence (numbers)
+        "ATGAAACTAG", // Regular sequence
+        NULL
+    };
+    int encodedCount = createTable(encodedTable, encodedGeneInfo);
+    printf("Created %d genes (one from encoded input)\n", encodedCount);
+    printTable(encodedTable, encodedCount);
+    printf("\n");
+    
+    printf("========================================\n");
+    printf("INTEGRATION TEST COMPLETED\n");
+    printf("========================================\n\n");
+}
+
+int main() {
+    printf("========================================\n");
+    printf("DNA CODE TEST SUITE\n");
+    printf("========================================\n\n");
+
+    // Unit tests (individual function tests)
+    // Uncomment the ones you want to test:
+    
+    // testSanitizeCode();
+    // testValidCheck();
+    // testEncodeDecode();
+    // testComplementMRNA();
+    // testMutation();
+    // testGeneOperations();
+    // testCommandType();
+
+    // Overall program integration test
+    testOverallProgram();
+
+    printf("========================================\n");
+    printf("ALL TESTS COMPLETED\n");
+    printf("========================================\n");
+
+    return 0;
+}
