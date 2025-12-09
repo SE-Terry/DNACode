@@ -1,15 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdbool.h>
-
-// Enum
-enum commandType {
-    SANITIZE, CHECK, COMPLEMENT, MRNA, ENCODE, DECODE,
-    CREATE, PRINT, MUTATION, REPAIR, REVERSE, LONGEST,
-    SHORTEST, PIPELINE, INVALID
-};
+#include "include.h"
 
 // ----- Begin: Student Answer -----
 
@@ -111,18 +100,21 @@ enum commandType getCommandType(char* command) {
     // ----- End: Student Answer -----
 }
 
-char* sanitizeCode(char *codes) {
+void sanitizeCode(char *codes, char *output) {
     // ----- Begin: Student Answer -----
     // Do dai chuoi duoc dam bao nam trong khoang [1, 300] ky tu
-    static char cleaned[301];
-    int i = 0;
-    int j = 0;
+    if (output == NULL) {
+        return;
+    }
 
-    cleaned[0] = '\0';
+    output[0] = '\0';
 
     if (codes == NULL) {
-        return cleaned;
+        return;
     }
+
+    int i = 0;
+    int j = 0;
 
     while (codes[i] != '\0' && j < 300) {
         char ch = codes[i];
@@ -133,41 +125,51 @@ char* sanitizeCode(char *codes) {
         else if (ch == 't') ch = 'T';
 
         if (ch == 'A' || ch == 'C' || ch == 'G' || ch == 'T') {
-            cleaned[j] = ch;
+            output[j] = ch;
             j++;
         }
 
         i++;
     }
 
-    cleaned[j] = '\0';
-
-    return cleaned;
+    output[j] = '\0';
     // ----- End: Student Answer -----
 }
 
+/* Global flag to optionally silence validCheck prints for nested calls */
+static int silentValidation = 0;
+
 bool validCheck(char *codes) {
     // ----- Begin: Student Answer -----
-    char *clean = sanitizeCode(codes);
+    char clean[301];
+    sanitizeCode(codes, clean);
     int len = (int)strlen(clean);
 
     if (len <= 1) {
-        printf("INVALID\nTYPE: BASE\n");
+        if (!silentValidation) {
+            printf("INVALID\nTYPE: BASE\n");
+        }
         return false;
     }
 
     if (len == 3) {
-        printf("INVALID\nTYPE: CODON\n");
+        if (!silentValidation) {
+            printf("INVALID\nTYPE: CODON\n");
+        }
         return false;
     }
 
     if (len < 9 || (len % 3 != 0)) {
-        printf("INVALID CODE\n");
+        if (!silentValidation) {
+            printf("INVALID CODE\n");
+        }
         return false;
     }
 
     if (strncmp(clean, "ATG", 3) != 0) {
-        printf("INVALID CODE\n");
+        if (!silentValidation) {
+            printf("INVALID CODE\n");
+        }
         return false;
     }
 
@@ -175,96 +177,127 @@ bool validCheck(char *codes) {
     if (strncmp(end, "TAA", 3) != 0
     && strncmp(end, "TAG", 3) != 0 
     && strncmp(end, "TGA", 3) != 0) {
-    // Kiem tra xem chuoi co ket thuc bang "TAA", "TAG", hoac "TGA" khong
-        printf("INVALID CODE\n");
+        // Kiem tra xem chuoi co ket thuc bang "TAA", "TAG", hoac "TGA" khong
+        if (!silentValidation) {
+            printf("INVALID CODE\n");
+        }
         return false;
     }
 
-    printf("VALID GENE\n");
+    if (!silentValidation) {
+        printf("VALID GENE\n");
+    }
     return true;
     // ----- End: Student Answer -----
 }
 
-char* generateComplement(char *codes) {
+void generateComplement(char *codes, char *output) {
     // ----- Begin: Student Answer -----
-    static char complement[301];
-
-    if (!validCheck(codes)) {
-        return codes;
+    if (output == NULL) {
+        return;
     }
 
-    char *clean = sanitizeCode(codes);
+    char clean[301];
+    sanitizeCode(codes, clean);
+
+    if (!validCheck(codes)) {
+        /* Return sanitized original on invalid */
+        strncpy(output, clean, 300);
+        output[300] = '\0';
+        return;
+    }
+
     int len = (int)strlen(clean);
 
     for (int i = 0; i < len && i < 300; i++) {
         char base = clean[i];
         if (base == 'A') {
-            complement[i] = 'T';
+            output[i] = 'T';
         } else if (base == 'T') {
-            complement[i] = 'A';
+            output[i] = 'A';
         } else if (base == 'C') {
-            complement[i] = 'G';
+            output[i] = 'G';
         } else if (base == 'G') {
-            complement[i] = 'C';
+            output[i] = 'C';
         } else {
-            complement[i] = base;
+            output[i] = base;
         }
     }
 
     if (len > 300) {
         len = 300;
     }
-    complement[len] = '\0';
-
-    return complement;
+    output[len] = '\0';
     // ----- End: Student Answer -----
 }
 
-char* generateMRNA(char *codes) {
+void generateMRNA(char *codes, char *output) {
     // ----- Begin: Student Answer -----
-    static char mrna[301];
-    char *complement = generateComplement(codes);
-
-    if (complement == codes) {
-        return codes;
+    if (output == NULL) {
+        return;
     }
+
+    /* Save current silentValidation state (used by callers like DNAPipeline) */
+    int prevSilent = silentValidation;
+
+    /* Validate once: prints "VALID GENE" only if not in silent mode */
+    if (!validCheck(codes)) {
+        char clean[301];
+        sanitizeCode(codes, clean);
+        strncpy(output, clean, 300);
+        output[300] = '\0';
+        silentValidation = prevSilent;
+        return;
+    }
+
+    /* Build complement while silencing any internal validCheck calls */
+    char complement[301];
+    silentValidation = 1;
+    generateComplement(codes, complement);
+    silentValidation = prevSilent;
 
     int len = (int)strlen(complement);
 
     for (int i = 0; i < len && i < 300; i++) {
         char base = complement[i];
         if (base == 'A') {
-            mrna[i] = 'U';
+            output[i] = 'U';
         } else if (base == 'T') {
-            mrna[i] = 'A';
+            output[i] = 'A';
         } else if (base == 'C') {
-            mrna[i] = 'G';
+            output[i] = 'G';
         } else if (base == 'G') {
-            mrna[i] = 'C';
+            output[i] = 'C';
         } else {
-            mrna[i] = base;
+            output[i] = base;
         }
     }
 
     if (len > 300) {
         len = 300;
     }
-    mrna[len] = '\0';
-
-    return mrna;
+    output[len] = '\0';
     // ----- End: Student Answer -----
 }
 
-char* encode(char *codes) {
+void encode(char *codes, char *output) {
     // ----- Begin: Student Answer -----
-    static char encoded[601]; // 100 codons max -> 600 chars + '\0'
-    encoded[0] = '\0';
-
-    if (!validCheck(codes)) {
-        return codes;
+    if (output == NULL) {
+        return;
     }
 
-    char *clean = sanitizeCode(codes);
+    output[0] = '\0';
+
+    if (!validCheck(codes)) {
+        char clean[301];
+        sanitizeCode(codes, clean);
+        strncpy(output, clean, 600);
+        output[600] = '\0';
+        return;
+    }
+
+    char clean[301];
+    sanitizeCode(codes, clean);
     int len = (int)strlen(clean);
     int pos = 0;
 
@@ -281,23 +314,35 @@ char* encode(char *codes) {
 
         int suffix = ((second * 31) + (third * 37)) % 10000;
 
-        pos += sprintf(encoded + pos, "%02d%04d", prefix, suffix);
+        pos += sprintf(output + pos, "%02d%04d", prefix, suffix);
     }
 
-    encoded[pos] = '\0';
-    return encoded;
+    output[pos] = '\0';
     // ----- End: Student Answer -----
 }
 
-char* decode(char *codes) {
+void decode(char *codes, char *output) {
     // ----- Begin: Student Answer -----
-    static char decoded[301];
-    int len = (int)strlen(codes);
+    if (output == NULL) {
+        return;
+    }
+
+    /* Keep only digit characters; ignore others to avoid invalid chunks */
+    char digitsOnly[601];
+    int dlen = 0;
+    for (int i = 0; codes[i] != '\0' && dlen < 600; i++) {
+        if (codes[i] >= '0' && codes[i] <= '9') {
+            digitsOnly[dlen++] = codes[i];
+        }
+    }
+    digitsOnly[dlen] = '\0';
+
+    int len = dlen;
     int pos = 0;
 
     for (int i = 0; i + 6 <= len && pos < 300; i += 6) {
         char prefixStr[3];
-        strncpy(prefixStr, codes + i, 2);
+        strncpy(prefixStr, digitsOnly + i, 2);
         prefixStr[2] = '\0';
 
         // atoi la ham chuyen chuoi ky tu so thanh so nguyen trong C
@@ -310,7 +355,7 @@ char* decode(char *codes) {
         else if (prefix == 84) first = 'T';
 
         char suffixStr[5];
-        strncpy(suffixStr, codes + i + 2, 4);
+        strncpy(suffixStr, digitsOnly + i + 2, 4);
         suffixStr[4] = '\0';
         int suffix = atoi(suffixStr);
 
@@ -331,13 +376,12 @@ char* decode(char *codes) {
             }
         }
 
-        decoded[pos++] = first;
-        if (pos < 300) decoded[pos++] = (char)secondVal;
-        if (pos < 300) decoded[pos++] = (char)thirdVal;
+        output[pos++] = first;
+        if (pos < 300) output[pos++] = (char)secondVal;
+        if (pos < 300) output[pos++] = (char)thirdVal;
     }
 
-    decoded[pos] = '\0';
-    return decoded;
+    output[pos] = '\0';
     // ----- End: Student Answer -----
 }
 
@@ -361,24 +405,32 @@ int createTable(struct Gene *emptyTable, char **geneInfo) {
     }
 
     for (int i = 0; geneInfo[i] != NULL; i++) {
-        char *raw = geneInfo[i];
+        const char *raw = geneInfo[i];
         int start = 0;
         int end = (int)strlen(raw) - 1;
 
+        /* Skip leading spaces/tabs */
         while (raw[start] == ' ' || raw[start] == '\t') {
             start++;
         }
-        while (end >= start && (raw[end] == ' ' || raw[end] == '\t' || raw[end] == '\n')) {
-            raw[end] = '\0';
+        /* Move end backward over spaces/tabs/newlines, but DO NOT modify raw (it may be a string literal) */
+        while (end >= start &&
+               (raw[end] == ' ' || raw[end] == '\t' || raw[end] == '\n' || raw[end] == '\r')) {
             end--;
         }
 
         char cleanedInput[610];
         int idx = 0;
-        for (int k = start; raw[k] != '\0' && idx < 609; k++) {
+        /* Copy trimmed substring [start, end] into cleanedInput */
+        for (int k = start; k <= end && raw[k] != '\0' && idx < 609; k++) {
             cleanedInput[idx++] = raw[k];
         }
         cleanedInput[idx] = '\0';
+
+        /* Skip empty entries after trimming */
+        if (cleanedInput[0] == '\0') {
+            continue;
+        }
 
         int isNumber = 1;
         for (int k = 0; cleanedInput[k] != '\0'; k++) {
@@ -390,12 +442,16 @@ int createTable(struct Gene *emptyTable, char **geneInfo) {
 
         char realSeq[301];
         if (isNumber) {
-            char *decoded = decode(cleanedInput);
-            strncpy(realSeq, decoded, 300);
-            realSeq[300] = '\0';
+            char decoded[301];
+            decode(cleanedInput, decoded);
+            sanitizeCode(decoded, realSeq);
         } else {
-            strncpy(realSeq, cleanedInput, 300);
-            realSeq[300] = '\0';
+            sanitizeCode(cleanedInput, realSeq);
+        }
+
+        /* Skip if sanitization removed all valid bases */
+        if (realSeq[0] == '\0') {
+            continue;
         }
 
         struct Gene *gene = &emptyTable[count];
@@ -404,21 +460,22 @@ int createTable(struct Gene *emptyTable, char **geneInfo) {
         strncpy(gene->org_seq, realSeq, 300);
         gene->org_seq[300] = '\0';
         gene->length = (int)strlen(gene->org_seq);
-
-        char *encoded = encode(gene->org_seq);
-        strncpy(gene->encoded_seq, encoded, 600);
+        
+        encode(gene->org_seq, gene->encoded_seq);
         gene->encoded_seq[600] = '\0';
 
-        char *complement = generateComplement(gene->org_seq);
-        if (complement == gene->org_seq) {
+        char complement[301];
+        generateComplement(gene->org_seq, complement);
+        if (strcmp(complement, gene->org_seq) == 0) {
             gene->complement_seq[0] = '\0';
         } else {
             strncpy(gene->complement_seq, complement, 300);
             gene->complement_seq[300] = '\0';
         }
 
-        char *mrna = generateMRNA(gene->org_seq);
-        if (mrna == gene->org_seq) {
+        char mrna[301];
+        generateMRNA(gene->org_seq, mrna);
+        if (strcmp(mrna, gene->org_seq) == 0) {
             gene->mrna_seq[0] = '\0';
         } else {
             strncpy(gene->mrna_seq, mrna, 300);
@@ -470,9 +527,18 @@ int findMutatedCodons(struct Gene mutatedGene, char *originalGene) {
         return 0;
     }
 
-    char *mutSeq = mutatedGene.org_seq;
-    int mutLen = (int)strlen(mutSeq);
-    int origLen = (int)strlen(originalGene);
+    /* Sanitize and validate lengths are multiples of 3; otherwise no valid codon to compare */
+    char mutSeqClean[301];
+    char origSeqClean[301];
+    sanitizeCode(mutatedGene.org_seq, mutSeqClean);
+    sanitizeCode(originalGene, origSeqClean);
+
+    int mutLen = (int)strlen(mutSeqClean);
+    int origLen = (int)strlen(origSeqClean);
+
+    if (mutLen < 3 || origLen < 3 || (mutLen % 3 != 0) || (origLen % 3 != 0)) {
+        return 0;
+    }
 
     int codonCount = mutLen / 3;
     if (origLen / 3 < codonCount) {
@@ -481,9 +547,9 @@ int findMutatedCodons(struct Gene mutatedGene, char *originalGene) {
 
     for (int i = 0; i < codonCount; i++) {
         int idx = i * 3;
-        if (mutSeq[idx] != originalGene[idx] ||
-            mutSeq[idx + 1] != originalGene[idx + 1] ||
-            mutSeq[idx + 2] != originalGene[idx + 2]) {
+        if (mutSeqClean[idx] != origSeqClean[idx] ||
+            mutSeqClean[idx + 1] != origSeqClean[idx + 1] ||
+            mutSeqClean[idx + 2] != origSeqClean[idx + 2]) {
             return i + 1;
         }
     }
@@ -492,36 +558,39 @@ int findMutatedCodons(struct Gene mutatedGene, char *originalGene) {
     // ----- End: Student Answer -----
 }
 
-char* repairMutation(struct Gene gene, int pos) {
+void repairMutation(struct Gene gene, int pos, char *output) {
     // ----- Begin: Student Answer -----
-    static char repaired[301];
-    strncpy(repaired, gene.org_seq, 300);
-    repaired[300] = '\0';
+    if (output == NULL) {
+        return;
+    }
 
-    int len = (int)strlen(repaired);
+    strncpy(output, gene.org_seq, 300);
+    output[300] = '\0';
+
+    int len = (int)strlen(output);
     int codonCount = len / 3;
     if (pos < 1 || pos > codonCount) {
-        return repaired;
+        return;
     }
 
     int index = (pos - 1) * 3;
 
     if (pos == 1) {
-        repaired[0] = 'A';
-        repaired[1] = 'T';
-        repaired[2] = 'G';
+        output[0] = 'A';
+        output[1] = 'T';
+        output[2] = 'G';
     } else if (pos == codonCount) {
-        repaired[index] = 'T';
-        repaired[index + 1] = 'A';
-        repaired[index + 2] = 'G';
+        output[index] = 'T';
+        output[index + 1] = 'A';
+        output[index + 2] = 'G';
     } else {
         if (pos % 2 == 1) {
             int counts[4] = {0, 0, 0, 0}; // A, C, G, T
             for (int i = 0; i < len; i++) {
-                if (repaired[i] == 'A') counts[0]++;
-                else if (repaired[i] == 'C') counts[1]++;
-                else if (repaired[i] == 'G') counts[2]++;
-                else if (repaired[i] == 'T') counts[3]++;
+                if (output[i] == 'A') counts[0]++;
+                else if (output[i] == 'C') counts[1]++;
+                else if (output[i] == 'G') counts[2]++;
+                else if (output[i] == 'T') counts[3]++;
             }
 
             int minIndex = 0;
@@ -536,37 +605,36 @@ char* repairMutation(struct Gene gene, int pos) {
             else if (minIndex == 2) base = 'G';
             else if (minIndex == 3) base = 'T';
 
-            repaired[index] = base;
-            repaired[index + 1] = base;
-            repaired[index + 2] = base;
+            output[index] = base;
+            output[index + 1] = base;
+            output[index + 2] = base;
         } else {
             int newLen = len - 3;
             for (int i = index; i < newLen; i++) {
-                repaired[i] = repaired[i + 3];
+                output[i] = output[i + 3];
             }
-            repaired[newLen] = '\0';
+            output[newLen] = '\0';
         }
     }
-
-    return repaired;
     // ----- End: Student Answer -----
 }
 
-char* reverseGene(struct Gene gene) {
+void reverseGene(struct Gene gene, char *output) {
     // ----- Begin: Student Answer -----
-    static char reversed[301];
+    if (output == NULL) {
+        return;
+    }
+
     int len = (int)strlen(gene.org_seq);
 
     for (int i = 0; i < len && i < 300; i++) {
-        reversed[i] = gene.org_seq[len - 1 - i];
+        output[i] = gene.org_seq[len - 1 - i];
     }
 
     if (len > 300) {
         len = 300;
     }
-    reversed[len] = '\0';
-
-    return reversed;
+    output[len] = '\0';
     // ----- End: Student Answer -----
 }
 
@@ -616,17 +684,24 @@ void shortestGene(struct Gene *geneTable, int count) {
 
 void DNAPipeline(struct Gene gene) {
     // ----- Begin: Student Answer -----
-    char *complement = generateComplement(gene.org_seq);
-    char *mrna = generateMRNA(gene.org_seq);
+    char complement[301];
+    char mrna[301];
+
+    /* Suppress any "VALID GENE" prints inside the pipeline */
+    int prevSilent = silentValidation;
+    silentValidation = 1;
+    generateComplement(gene.org_seq, complement);
+    generateMRNA(gene.org_seq, mrna);
+    silentValidation = prevSilent;
 
     printf("DNA: %s\n", gene.org_seq);
-    if (complement == gene.org_seq) {
+    if (strcmp(complement, gene.org_seq) == 0) {
         printf("DNA-COM: \n");
     } else {
         printf("DNA-COM: %s\n", complement);
     }
 
-    if (mrna == gene.org_seq) {
+    if (strcmp(mrna, gene.org_seq) == 0) {
         printf("mRNA: \n");
     } else {
         printf("mRNA: %s\n", mrna);
@@ -659,7 +734,8 @@ void getActionByCommand(enum commandType command, struct Gene *geneTable, int co
     switch (command) {
         case SANITIZE:
             for (int i = 0; i < count; i++) {
-                char *clean = sanitizeCode(geneTable[i].org_seq);
+                char clean[301];
+                sanitizeCode(geneTable[i].org_seq, clean);
                 printf("%s\n", clean);
             }
             break;
@@ -670,31 +746,35 @@ void getActionByCommand(enum commandType command, struct Gene *geneTable, int co
             break;
         case COMPLEMENT:
             for (int i = 0; i < count; i++) {
-                char *comp = generateComplement(geneTable[i].org_seq);
-                if (comp != geneTable[i].org_seq) {
+                char comp[301];
+                generateComplement(geneTable[i].org_seq, comp);
+                if (strcmp(comp, geneTable[i].org_seq) != 0) {
                     printf("%s\n", comp);
                 }
             }
             break;
         case MRNA:
             for (int i = 0; i < count; i++) {
-                char *mrna = generateMRNA(geneTable[i].org_seq);
-                if (mrna != geneTable[i].org_seq) {
+                char mrna[301];
+                generateMRNA(geneTable[i].org_seq, mrna);
+                if (strcmp(mrna, geneTable[i].org_seq) != 0) {
                     printf("%s\n", mrna);
                 }
             }
             break;
         case ENCODE:
             for (int i = 0; i < count; i++) {
-                char *enc = encode(geneTable[i].org_seq);
-                if (enc != geneTable[i].org_seq) {
-                    printf("%s\n", enc);
+                char enc[601];
+                encode(geneTable[i].org_seq, enc);
+                if (strcmp(enc, geneTable[i].org_seq) != 0) {
+                    printf("\"%s\"\n", enc);
                 }
             }
             break;
         case DECODE:
             for (int i = 0; i < count; i++) {
-                char *dec = decode(geneTable[i].encoded_seq);
+                char dec[301];
+                decode(geneTable[i].encoded_seq, dec);
                 printf("%s\n", dec);
             }
             break;
@@ -718,7 +798,10 @@ void getActionByCommand(enum commandType command, struct Gene *geneTable, int co
             for (int i = 0; i < count; i++) {
                 int mutated = isMutated(geneTable[i], com_mutation_geneTable, 10);
                 if (mutated) {
-                    char *fixed = repairMutation(geneTable[i], 1);
+                    char fixed[301];
+                    /* Find the first mutated codon position compared to the corresponding original gene */
+                    int pos = findMutatedCodons(geneTable[i], com_mutation_geneTable[i].org_seq);
+                    repairMutation(geneTable[i], pos, fixed);
                     printf("Gene %s: %s\n", geneTable[i].name, fixed);
                 } else {
                     printf("Gene %s: NORMAL\n", geneTable[i].name);
@@ -727,7 +810,8 @@ void getActionByCommand(enum commandType command, struct Gene *geneTable, int co
             break;
         case REVERSE:
             for (int i = 0; i < count; i++) {
-                char *rev = reverseGene(geneTable[i]);
+                char rev[301];
+                reverseGene(geneTable[i], rev);
                 printf("%s\n", rev);
             }
             break;
@@ -740,6 +824,9 @@ void getActionByCommand(enum commandType command, struct Gene *geneTable, int co
         case PIPELINE:
             for (int i = 0; i < count; i++) {
                 DNAPipeline(geneTable[i]);
+                if (i < count - 1) {
+                    printf("\n");
+                }
             }
             break;
         case INVALID:
