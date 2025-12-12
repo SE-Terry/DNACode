@@ -136,7 +136,6 @@ void sanitizeCode(char *codes, char *output) {
     // ----- End: Student Answer -----
 }
 
-/* Global flag to optionally silence validCheck prints for nested calls */
 static int silentValidation = 0;
 
 bool validCheck(char *codes) {
@@ -201,7 +200,6 @@ void generateComplement(char *codes, char *output) {
     sanitizeCode(codes, clean);
 
     if (!validCheck(codes)) {
-        /* Return sanitized original on invalid */
         strncpy(output, clean, 300);
         output[300] = '\0';
         return;
@@ -237,10 +235,8 @@ void generateMRNA(char *codes, char *output) {
         return;
     }
 
-    /* Save current silentValidation state (used by callers like DNAPipeline) */
     int prevSilent = silentValidation;
 
-    /* Validate once: prints "VALID GENE" only if not in silent mode */
     if (!validCheck(codes)) {
         char clean[301];
         sanitizeCode(codes, clean);
@@ -250,7 +246,6 @@ void generateMRNA(char *codes, char *output) {
         return;
     }
 
-    /* Build complement while silencing any internal validCheck calls */
     char complement[301];
     silentValidation = 1;
     generateComplement(codes, complement);
@@ -327,7 +322,6 @@ void decode(char *codes, char *output) {
         return;
     }
 
-    /* Keep only digit characters; ignore others to avoid invalid chunks */
     char digitsOnly[601];
     int dlen = 0;
     for (int i = 0; codes[i] != '\0' && dlen < 600; i++) {
@@ -409,11 +403,9 @@ int createTable(struct Gene *emptyTable, char **geneInfo) {
         int start = 0;
         int end = (int)strlen(raw) - 1;
 
-        /* Skip leading spaces/tabs */
         while (raw[start] == ' ' || raw[start] == '\t') {
             start++;
         }
-        /* Move end backward over spaces/tabs/newlines, but DO NOT modify raw (it may be a string literal) */
         while (end >= start &&
                (raw[end] == ' ' || raw[end] == '\t' || raw[end] == '\n' || raw[end] == '\r')) {
             end--;
@@ -421,13 +413,11 @@ int createTable(struct Gene *emptyTable, char **geneInfo) {
 
         char cleanedInput[610];
         int idx = 0;
-        /* Copy trimmed substring [start, end] into cleanedInput */
         for (int k = start; k <= end && raw[k] != '\0' && idx < 609; k++) {
             cleanedInput[idx++] = raw[k];
         }
         cleanedInput[idx] = '\0';
 
-        /* Skip empty entries after trimming */
         if (cleanedInput[0] == '\0') {
             continue;
         }
@@ -449,7 +439,6 @@ int createTable(struct Gene *emptyTable, char **geneInfo) {
             sanitizeCode(cleanedInput, realSeq);
         }
 
-        /* Skip if sanitization removed all valid bases */
         if (realSeq[0] == '\0') {
             continue;
         }
@@ -527,7 +516,6 @@ int findMutatedCodons(struct Gene mutatedGene, char *originalGene) {
         return 0;
     }
 
-    /* Sanitize and validate lengths are multiples of 3; otherwise no valid codon to compare */
     char mutSeqClean[301];
     char origSeqClean[301];
     sanitizeCode(mutatedGene.org_seq, mutSeqClean);
@@ -687,7 +675,6 @@ void DNAPipeline(struct Gene gene) {
     char complement[301];
     char mrna[301];
 
-    /* Suppress any "VALID GENE" prints inside the pipeline */
     int prevSilent = silentValidation;
     silentValidation = 1;
     generateComplement(gene.org_seq, complement);
@@ -799,7 +786,6 @@ void getActionByCommand(enum commandType command, struct Gene *geneTable, int co
                 int mutated = isMutated(geneTable[i], com_mutation_geneTable, 10);
                 if (mutated) {
                     char fixed[301];
-                    /* Find the first mutated codon position compared to the corresponding original gene */
                     int pos = findMutatedCodons(geneTable[i], com_mutation_geneTable[i].org_seq);
                     repairMutation(geneTable[i], pos, fixed);
                     printf("Gene %s: %s\n", geneTable[i].name, fixed);
